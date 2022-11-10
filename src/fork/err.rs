@@ -5,7 +5,6 @@ use std::fmt;
 use super::pty::{MasterError, SlaveError};
 
 /// The alias `Result` learns `ForkError` possibility.
-
 pub type Result<T> = ::std::result::Result<T, ForkError>;
 
 /// The enum `ForkError` defines the possible errors from constructor Fork.
@@ -33,7 +32,6 @@ pub enum ForkError {
 
 impl fmt::Display for ForkError {
     /// The function `fmt` formats the value using the given formatter.
-
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", ::errno::errno())
     }
@@ -41,7 +39,6 @@ impl fmt::Display for ForkError {
 
 impl Error for ForkError {
     /// The function `description` returns a short description of the error.
-
     fn description(&self) -> &str {
         match *self {
             ForkError::Failure => {
@@ -63,8 +60,7 @@ impl Error for ForkError {
     }
 
     /// The function `cause` returns the lower-level cause of this error, if any.
-
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             ForkError::BadMaster(ref err) => Some(err),
             ForkError::BadSlave(ref err) => Some(err),
