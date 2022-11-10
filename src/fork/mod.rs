@@ -92,6 +92,16 @@ impl Fork {
         }
     }
 
+    /// The function `child_pid` returns the pid of the child process if
+    /// this instance of Fork represents the parent process and None
+    /// in the child process.
+    pub fn child_pid(&self) -> Option<libc::pid_t> {
+        match *self {
+            Fork::Child(_) => None,
+            Fork::Parent(pid, _) => Some(pid),
+        }
+    }
+
     /// The function `is_parent` returns the pid or parent
     /// or none.
     pub fn is_parent(&self) -> Result<Master> {
