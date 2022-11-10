@@ -17,7 +17,7 @@ debug         = [] # for building with debug messages
 travis        = ["lints", "nightly"] # for building with travis-cargo
 
 [dependencies.errno]
-version       = "0.1"
+version       = "0.2"
 
 [dependencies.libc]
 version       = ">= 0.2.18"
