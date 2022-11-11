@@ -6,7 +6,7 @@ use ::libc;
 pub use self::err::{SlaveError, Result};
 use std::os::unix::io::{AsRawFd, RawFd};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Slave {
     pty: RawFd,
 }

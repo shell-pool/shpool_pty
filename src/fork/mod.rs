@@ -9,7 +9,7 @@ pub use self::pty::{Master, MasterError};
 pub use self::pty::{Slave, SlaveError};
 use std::ffi::CString;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Fork {
     // Parent child's pid and master's pty.
     Parent(libc::pid_t, Master),
