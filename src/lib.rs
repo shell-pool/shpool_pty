@@ -89,6 +89,7 @@
 
 extern crate libc;
 extern crate errno;
+extern crate log;
 
 mod descriptor;
 pub mod fork;

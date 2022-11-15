@@ -1,6 +1,6 @@
 [package]
 name = "pty"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Hika Hibariya <hibariya@gmail.com>", "Ethan Pailes <ethan@pailes.org>"]
 repository = "https://github.com/hibariya/pty-rs"
 homepage = "https://github.com/hibariya/pty-rs"
@@ -15,6 +15,9 @@ nightly       = [] # for building with nightly and unstable features
 unstable      = [] # for building with unstable features on stable Rust
 debug         = [] # for building with debug messages
 travis        = ["lints", "nightly"] # for building with travis-cargo
+
+[dependencies.log]
+version       = "0.4"
 
 [dependencies.errno]
 version       = "0.2"

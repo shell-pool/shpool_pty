@@ -31,10 +31,10 @@ pub trait Descriptor: AsRawFd {
     }
 
     /// The destructor function `drop` call the method `close`
-    /// and panic if a error is occurred.
+    /// and log if an error occurred.
     fn drop(&self) {
-        if self.close().is_err() {
-            unimplemented!();
+        if let Err(e) = self.close() {
+            log::warn!("error closing fd {}: {:?}", self.as_raw_fd(), e);
         }
     }
 }
