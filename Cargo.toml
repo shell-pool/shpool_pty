@@ -1,9 +1,9 @@
 [package]
-name = "pty"
-version = "0.2.6"
+name = "shpool_pty"
+version = "0.1.0"
 authors = ["Hika Hibariya <hibariya@gmail.com>", "Ethan Pailes <ethan@pailes.org>"]
-repository = "https://github.com/hibariya/pty-rs"
-homepage = "https://github.com/hibariya/pty-rs"
+repository = "https://github.com/ethanpailes/pty-rs"
+homepage = "https://github.com/ethanpailes/pty-rs"
 license = "MIT"
 description = "Fork with new pseudo-terminal (PTY)"
 keywords = ["pty", "tty", "pseudo", "terminal", "fork"]
