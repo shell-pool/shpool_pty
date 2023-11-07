@@ -20,6 +20,11 @@ impl Slave {
         }
     }
 
+    /// Extract the raw fd from the underlying object
+    pub fn raw_fd(&self) -> &Option<RawFd> {
+        &self.pty
+    }
+
     pub fn dup2(&self, std: libc::c_int) -> Result<libc::c_int> {
         if let Some(fd) = self.pty {
             unsafe {

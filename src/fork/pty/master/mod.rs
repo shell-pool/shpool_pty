@@ -21,6 +21,11 @@ impl Master {
         }
     }
 
+    /// Extract the raw fd from the underlying object
+    pub fn raw_fd(&self) -> &Option<RawFd> {
+        &self.pty
+    }
+
     /// Change UID and GID of slave pty associated with master pty whose
     /// fd is provided, to the real UID and real GID of the calling thread.
     pub fn grantpt(&self) -> Result<libc::c_int> {
