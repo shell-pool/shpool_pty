@@ -1,6 +1,6 @@
 [package]
 name = "shpool_pty"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Hika Hibariya <hibariya@gmail.com>", "Ethan Pailes <ethan@pailes.org>"]
 repository = "https://github.com/ethanpailes/pty-rs"
 homepage = "https://github.com/ethanpailes/pty-rs"
