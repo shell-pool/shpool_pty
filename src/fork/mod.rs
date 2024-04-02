@@ -6,7 +6,6 @@ use descriptor::Descriptor;
 pub use self::err::{ForkError, Result};
 pub use self::pty::{Master, MasterError};
 pub use self::pty::{Slave, SlaveError};
-use libc;
 use std::ffi::CStr;
 use std::ffi::CString;
 

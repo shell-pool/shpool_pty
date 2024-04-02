@@ -1,7 +1,5 @@
 mod err;
 
-use libc;
-
 use descriptor::Descriptor;
 
 pub use self::err::{MasterError, Result};

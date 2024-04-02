@@ -1,7 +1,6 @@
 mod err;
 
 use descriptor::Descriptor;
-use libc;
 
 pub use self::err::{Result, SlaveError};
 use std::ffi::CStr;

@@ -1,7 +1,5 @@
 mod err;
 
-use libc;
-
 pub use self::err::DescriptorError;
 use std::ffi::CStr;
 use std::os::unix::io::RawFd;

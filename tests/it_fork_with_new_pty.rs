@@ -6,7 +6,6 @@ use self::shpool_pty::prelude::*;
 
 use std::io::prelude::*;
 use std::process::{Command, Stdio};
-use std::string::String;
 
 #[test]
 fn it_fork_with_new_pty() {
