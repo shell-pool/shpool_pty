@@ -5,7 +5,6 @@ use self::shpool_pty::prelude::*;
 
 use std::io::prelude::*;
 use std::process::Command;
-use std::string::String;
 
 fn read_line(master: &mut Master) -> String {
     let mut buf = [0];
