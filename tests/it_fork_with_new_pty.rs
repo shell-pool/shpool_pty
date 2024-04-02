@@ -1,6 +1,6 @@
-extern crate shpool_pty;
-extern crate libc;
 extern crate errno;
+extern crate libc;
+extern crate shpool_pty;
 
 use self::shpool_pty::prelude::*;
 
@@ -12,10 +12,12 @@ use std::string::String;
 fn it_fork_with_new_pty() {
     let fork = Fork::from_ptmx().unwrap();
 
-    if let Some(mut master) = fork.is_parent().ok() {
+    if let Ok(mut master) = fork.is_parent() {
         let mut string = String::new();
 
-        master.read_to_string(&mut string).unwrap_or_else(|e| panic!("{}", e));
+        master
+            .read_to_string(&mut string)
+            .unwrap_or_else(|e| panic!("{}", e));
 
         let output = Command::new("tty")
             .stdin(Stdio::inherit())
@@ -27,14 +29,14 @@ fn it_fork_with_new_pty() {
         let parent_tty = output_str.trim();
         let child_tty = string.trim();
 
-        assert!(child_tty != "");
+        assert!(!child_tty.is_empty());
         assert!(child_tty != parent_tty);
 
         // only compare if parent is tty
         // travis runs the tests without tty
         if parent_tty != "not a tty" {
-            let mut parent_tty_dir: Vec<&str> = parent_tty.split("/").collect();
-            let mut child_tty_dir: Vec<&str> = child_tty.split("/").collect();
+            let mut parent_tty_dir: Vec<&str> = parent_tty.split('/').collect();
+            let mut child_tty_dir: Vec<&str> = child_tty.split('/').collect();
 
             parent_tty_dir.pop();
             child_tty_dir.pop();

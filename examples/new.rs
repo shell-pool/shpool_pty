@@ -1,5 +1,5 @@
-extern crate shpool_pty;
 extern crate libc;
+extern crate shpool_pty;
 
 use self::shpool_pty::prelude::*;
 
@@ -9,10 +9,12 @@ use std::process::{Command, Stdio};
 fn main() {
     let fork = Fork::from_ptmx().unwrap();
 
-    if let Some(mut master) = fork.is_parent().ok() {
+    if let Ok(mut master) = fork.is_parent() {
         let mut string = String::new();
 
-        master.read_to_string(&mut string).unwrap_or_else(|e| panic!("{}", e));
+        master
+            .read_to_string(&mut string)
+            .unwrap_or_else(|e| panic!("{}", e));
 
         let output = Command::new("tty")
             .stdin(Stdio::inherit())
@@ -24,12 +26,17 @@ fn main() {
         let parent_tty = output_str.trim();
         let child_tty = string.trim();
 
-        println!("child_tty(\"{}\")[{}] != \"{}\" => {}", child_tty, child_tty.len(), "", child_tty != "");
-        assert!(child_tty != "");
+        println!(
+            "child_tty(\"{}\")[{}] != \"\" => {}",
+            child_tty,
+            child_tty.len(),
+            !child_tty.is_empty()
+        );
+        assert!(!child_tty.is_empty());
         assert!(child_tty != parent_tty);
 
-        let mut parent_tty_dir: Vec<&str> = parent_tty.split("/").collect();
-        let mut child_tty_dir: Vec<&str> = child_tty.split("/").collect();
+        let mut parent_tty_dir: Vec<&str> = parent_tty.split('/').collect();
+        let mut child_tty_dir: Vec<&str> = child_tty.split('/').collect();
 
         parent_tty_dir.pop();
         child_tty_dir.pop();
