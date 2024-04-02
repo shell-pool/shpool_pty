@@ -1,15 +1,15 @@
-extern crate shpool_pty;
-extern crate libc;
 extern crate errno;
+extern crate libc;
+extern crate shpool_pty;
 
 use shpool_pty::fork::*;
 use std::io::Read;
-use std::process::{Command};
+use std::process::Command;
 
 fn main() {
     let fork = Fork::from_ptmx().unwrap();
 
-    if let Some(mut master) = fork.is_parent().ok() {
+    if let Ok(mut master) = fork.is_parent() {
         // Read output via PTY master
         let mut output = String::new();
 

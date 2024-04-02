@@ -1,12 +1,12 @@
-mod pty;
 mod err;
+mod pty;
 
-use ::descriptor::Descriptor;
+use descriptor::Descriptor;
 
 pub use self::err::{ForkError, Result};
 pub use self::pty::{Master, MasterError};
 pub use self::pty::{Slave, SlaveError};
-use ::libc;
+use libc;
 use std::ffi::CStr;
 use std::ffi::CString;
 
@@ -47,13 +47,14 @@ impl Fork {
                             // Safety: ptsname_r returns a valid c string when it returns a 0
                             // (success) code, and we make double extra sure there is a null
                             // terminator by adding one ourselves.
-                            let name: &CStr = unsafe { CStr::from_ptr(name_ptr as *const libc::c_char) };
+                            let name: &CStr =
+                                unsafe { CStr::from_ptr(name_ptr as *const libc::c_char) };
                             Fork::from_pts(name)
                         }
                         pid => Ok(Fork::Parent(pid, master)),
                     }
                 }
-            },
+            }
         }
     }
 
@@ -68,11 +69,11 @@ impl Fork {
                 match Slave::new(ptsname) {
                     Err(cause) => Err(ForkError::BadSlave(cause)),
                     Ok(slave) => {
-                        if let Some(cause) = slave.dup2(libc::STDIN_FILENO)
+                        if let Some(cause) = slave.dup2(libc::STDIN_FILENO).err().or(slave
+                            .dup2(libc::STDOUT_FILENO)
                             .err()
-                            .or(slave.dup2(libc::STDOUT_FILENO)
-                                .err()
-                                .or(slave.dup2(libc::STDERR_FILENO).err())) {
+                            .or(slave.dup2(libc::STDERR_FILENO).err()))
+                        {
                             Err(ForkError::BadSlave(cause))
                         } else {
                             Ok(Fork::Child(slave))
@@ -98,24 +99,22 @@ impl Fork {
     pub fn wait_for_exit(&self) -> Result<(libc::pid_t, Option<i32>)> {
         match *self {
             Fork::Child(_) => Err(ForkError::IsChild),
-            Fork::Parent(pid, _) => {
-                loop {
-                    unsafe {
-                        let mut status = 0;
-                        match libc::waitpid(pid, &mut status, 0) {
-                            0 => continue,
-                            -1 => return Err(ForkError::WaitpidFail),
-                            _ => {
-                                if libc::WIFEXITED(status) {
-                                    return Ok((pid, Some(libc::WEXITSTATUS(status))));
-                                } else {
-                                    return Ok((pid, None));
-                                }
+            Fork::Parent(pid, _) => loop {
+                unsafe {
+                    let mut status = 0;
+                    match libc::waitpid(pid, &mut status, 0) {
+                        0 => continue,
+                        -1 => return Err(ForkError::WaitpidFail),
+                        _ => {
+                            if libc::WIFEXITED(status) {
+                                return Ok((pid, Some(libc::WEXITSTATUS(status))));
+                            } else {
+                                return Ok((pid, None));
                             }
                         }
                     }
                 }
-            }
+            },
         }
     }
 
@@ -134,7 +133,7 @@ impl Fork {
     pub fn is_parent(&self) -> Result<Master> {
         match *self {
             Fork::Child(_) => Err(ForkError::IsChild),
-            Fork::Parent(_, ref master) => Ok(master.clone()),
+            Fork::Parent(_, ref master) => Ok(*master),
         }
     }
 
@@ -150,9 +149,8 @@ impl Fork {
 
 impl Drop for Fork {
     fn drop(&mut self) {
-        match self {
-            Fork::Parent(_, master) => Descriptor::drop(master),
-            _ => {}
+        if let Fork::Parent(_, master) = self {
+            Descriptor::drop(master)
         }
     }
 }

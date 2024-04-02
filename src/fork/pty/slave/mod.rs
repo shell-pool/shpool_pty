@@ -1,10 +1,11 @@
 mod err;
 
-use ::descriptor::Descriptor;
-use ::libc;
+use descriptor::Descriptor;
+use libc;
 
-pub use self::err::{SlaveError, Result};
+pub use self::err::{Result, SlaveError};
 use std::ffi::CStr;
+use std::os::fd::BorrowedFd;
 use std::os::unix::io::RawFd;
 
 #[derive(Debug, Clone)]
@@ -24,6 +25,13 @@ impl Slave {
     /// Extract the raw fd from the underlying object
     pub fn raw_fd(&self) -> &Option<RawFd> {
         &self.pty
+    }
+
+    /// Borrow the raw fd
+    pub fn borrow_fd(&self) -> Option<BorrowedFd<'_>> {
+        // Safety: we only ever close on drop, so this will be
+        //         live the whole time.
+        self.pty.map(|fd| unsafe { BorrowedFd::borrow_raw(fd) })
     }
 
     pub fn dup2(&self, std: libc::c_int) -> Result<libc::c_int> {

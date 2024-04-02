@@ -2,11 +2,12 @@ mod err;
 
 use libc;
 
-use ::descriptor::Descriptor;
+use descriptor::Descriptor;
 
 pub use self::err::{MasterError, Result};
 use std::ffi::CStr;
 use std::io;
+use std::os::fd::BorrowedFd;
 use std::os::unix::io::RawFd;
 
 #[derive(Debug, Copy, Clone)]
@@ -25,6 +26,13 @@ impl Master {
     /// Extract the raw fd from the underlying object
     pub fn raw_fd(&self) -> &Option<RawFd> {
         &self.pty
+    }
+
+    /// Borrow the raw fd
+    pub fn borrow_fd(&self) -> Option<BorrowedFd<'_>> {
+        // Safety: we only ever close on drop, so this will be
+        //         live the whole time.
+        self.pty.map(|fd| unsafe { BorrowedFd::borrow_raw(fd) })
     }
 
     /// Change UID and GID of slave pty associated with master pty whose
@@ -58,7 +66,7 @@ impl Master {
 
     /// Returns a pointer to a static buffer, which will be overwritten on
     /// subsequent calls.
-    pub fn ptsname_r(&self, buf: &mut Vec<u8>) -> Result<()> {
+    pub fn ptsname_r(&self, buf: &mut [u8]) -> Result<()> {
         if let Some(fd) = self.pty {
             // Safety: the vector's memory is valid for the duration
             // of the call
@@ -66,7 +74,7 @@ impl Master {
                 let data: *mut u8 = &mut buf[0];
                 match libc::ptsname_r(fd, data as *mut libc::c_char, buf.len()) {
                     0 => Ok(()),
-                    _ => Err(MasterError::PtsnameError),  // should probably capture errno
+                    _ => Err(MasterError::PtsnameError), // should probably capture errno
                 }
             }
         } else {
@@ -85,9 +93,7 @@ impl io::Read for Master {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         if let Some(fd) = self.pty {
             unsafe {
-                match libc::read(fd,
-                                 buf.as_mut_ptr() as *mut libc::c_void,
-                                 buf.len()) {
+                match libc::read(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len()) {
                     -1 => Ok(0),
                     len => Ok(len as usize),
                 }
@@ -102,9 +108,7 @@ impl io::Write for Master {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         if let Some(fd) = self.pty {
             unsafe {
-                match libc::write(fd,
-                                  buf.as_ptr() as *const libc::c_void,
-                                  buf.len()) {
+                match libc::write(fd, buf.as_ptr() as *const libc::c_void, buf.len()) {
                     -1 => Err(io::Error::last_os_error()),
                     ret => Ok(ret as usize),
                 }

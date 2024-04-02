@@ -1,0 +1,51 @@
+name: presubmit
+on: [pull_request, workflow_call, workflow_dispatch]
+
+jobs:
+  test:
+    name: cargo test --all-features
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: moonrepo/setup-rust@b8edcc56aab474d90c7cf0bb8beeaf8334c15e9f
+        with:
+          channel: '1.74.0'
+      - run: sudo apt-get install libpam0g-dev
+      - run: cargo test --all-features
+      - run: cargo test --no-default-features
+
+  rustfmt:
+    name: cargo +nightly fmt -- --check
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: moonrepo/setup-rust@b8edcc56aab474d90c7cf0bb8beeaf8334c15e9f
+        with:
+          components: rustfmt
+          channel: nightly
+      - run: cargo +nightly fmt -- --check
+
+  cranky:
+    name: cargo +nightly cranky --all-targets -- -D warnings
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: moonrepo/setup-rust@b8edcc56aab474d90c7cf0bb8beeaf8334c15e9f
+        with:
+          components: clippy
+          bins: cargo-cranky@0.3.0
+          channel: nightly
+      - run: sudo apt-get install libpam0g-dev
+      - run: cargo +nightly cranky --all-targets -- -D warnings
+
+  deny:
+    name: cargo deny --all-features check licenses
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: moonrepo/setup-rust@b8edcc56aab474d90c7cf0bb8beeaf8334c15e9f
+        with:
+          channel: '1.74.0'
+          bins: cargo-deny
+      - run: sudo apt-get install libpam0g-dev
+      - run: cargo deny --all-features check licenses

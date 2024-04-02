@@ -1,21 +1,27 @@
 mod err;
 
-use ::libc;
+use libc;
 
 pub use self::err::DescriptorError;
 use std::ffi::CStr;
 use std::os::unix::io::RawFd;
 
+/// # Safety
+///
+/// Implmentations MUST only return valid fds from
+/// these methods. Callers MUST NOT use the fds once the
+/// returning object has fallen out of scope.
 pub unsafe trait Descriptor {
     /// If the descriptor has a valid fd, return it
     fn take_raw_fd(&mut self) -> Option<RawFd>;
 
     /// The constructor function `open` opens the path
     /// and returns the fd.
-    fn open(path: &CStr,
-            flag: libc::c_int,
-            mode: Option<libc::c_int>)
-            -> Result<RawFd, DescriptorError> {
+    fn open(
+        path: &CStr,
+        flag: libc::c_int,
+        mode: Option<libc::c_int>,
+    ) -> Result<RawFd, DescriptorError> {
         // Safety: we've just ensured that path is non-null and the
         // other params are valid by construction.
         unsafe {
