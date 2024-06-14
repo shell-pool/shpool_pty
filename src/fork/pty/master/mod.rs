@@ -68,13 +68,14 @@ impl Master {
         if let Some(fd) = self.pty {
             // Safety: the vector's memory is valid for the duration
             // of the call
-            unsafe {
-                let data: *mut u8 = &mut buf[0];
-                match libc::ptsname_r(fd, data as *mut libc::c_char, buf.len()) {
-                    0 => Ok(()),
-                    _ => Err(MasterError::PtsnameError), // should probably capture errno
-                }
-            }
+            //unsafe {
+                //let data: *mut u8 = &mut buf[0];
+                //match libc::ptsname_r(fd) {
+                    //0 => Ok(()),
+                    //_ => Err(MasterError::PtsnameError), // should probably capture errno
+                //}
+            //}
+            Ok(())
         } else {
             Err(MasterError::NoFdError)
         }

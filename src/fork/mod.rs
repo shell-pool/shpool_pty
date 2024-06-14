@@ -35,9 +35,10 @@ impl Fork {
                         -1 => Err(ForkError::Failure),
                         0 => {
                             let mut ptsname_buf = vec![0; MAX_PTS_NAME];
-                            if let Err(cause) = master.ptsname_r(&mut ptsname_buf) {
-                                return Err(ForkError::BadMaster(cause));
-                            }
+                            //if let Err(cause) = master.ptsname_r(&mut ptsname_buf) {
+                                //return Err(ForkError::BadMaster(cause));
+                            //}
+                            // TODO: replace this
                             // ensure null termination
                             let last_idx = ptsname_buf.len() - 1;
                             ptsname_buf[last_idx] = 0;
