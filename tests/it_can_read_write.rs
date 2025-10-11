@@ -28,6 +28,6 @@ fn it_can_read_write() {
         assert_eq!(read_line(&mut master).trim(), "readme!");
         let _ = master.write("exit\n".to_string().as_bytes());
     } else {
-        let _ = Command::new("bash").env_clear().status();
+        let _ = Command::new("sh").env_clear().status();
     }
 }
