@@ -1,12 +1,11 @@
-//! macOS/iOS implementation of ptsname_r
+//! macOS implementation of ptsname_r
 //!
-//! As `ptsname_r()` is not available on macOS/iOS, this provides a compatible
+//! As `ptsname_r()` is not available on macOS, this provides a compatible
 //! implementation using the `TIOCPTYGNAME` ioctl syscall.
 //!
 //! Based on: https://tarq.net/posts/ptsname-on-osx-with-rust/
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
-#[inline]
+#[cfg(any(target_os = "macos"))]
 pub unsafe fn ptsname_r(
     fd: libc::c_int,
     buf: *mut libc::c_char,
@@ -48,7 +47,7 @@ mod tests {
     use super::*;
     use std::ffi::CStr;
 
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(any(target_os = "macos"))]
     #[test]
     fn test_ptsname_r_retrieves_valid_name() {
         let master_fd = unsafe { libc::posix_openpt(libc::O_RDWR | libc::O_NOCTTY) };
@@ -79,7 +78,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(any(target_os = "macos"))]
     #[test]
     fn test_ptsname_r_buffer_too_small() {
         let master_fd = unsafe { libc::posix_openpt(libc::O_RDWR | libc::O_NOCTTY) };
@@ -102,7 +101,7 @@ mod tests {
         }
     }
 
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(any(target_os = "macos"))]
     #[test]
     fn test_ptsname_r_invalid_fd() {
         let mut buf = vec![0u8; 1024];
@@ -111,7 +110,7 @@ mod tests {
         assert_ne!(result, 0, "Expected non-zero error code for invalid fd");
     }
 
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(any(target_os = "macos"))]
     #[test]
     fn test_ptsname_r_null_buffer() {
         let master_fd = unsafe { libc::posix_openpt(libc::O_RDWR | libc::O_NOCTTY) };

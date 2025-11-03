@@ -1,6 +1,6 @@
 mod err;
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(any(target_os = "macos"))]
 mod ptsname_r_macos;
 
 use descriptor::Descriptor;
@@ -77,7 +77,7 @@ impl Master {
                 // of the call
                 let result = libc::ptsname_r(fd, data as *mut libc::c_char, buf.len());
 
-                #[cfg(any(target_os = "macos", target_os = "ios"))]
+                #[cfg(any(target_os = "macos"))]
                 let result = ptsname_r_macos::ptsname_r(fd, data as *mut libc::c_char, buf.len());
 
                 match result {
