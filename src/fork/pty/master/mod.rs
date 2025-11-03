@@ -82,7 +82,7 @@ impl Master {
 
                 match result {
                     0 => Ok(()),
-                    _ => Err(MasterError::PtsnameError),
+                    _ => Err(MasterError::PtsnameError), // should probably capture errno
                 }
             }
         } else {
