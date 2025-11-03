@@ -20,7 +20,7 @@ pub unsafe fn ptsname_r(
 
     let mut ioctl_buf: [libc::c_char; IOCTL_BUF_SIZE] = [0; IOCTL_BUF_SIZE];
 
-    if libc::ioctl(fd, libc::TIOCPTYGNAME as u64, &mut ioctl_buf) != 0 {
+    if libc::ioctl(fd, libc::TIOCPTYGNAME as libc::c_ulong, &mut ioctl_buf) != 0 {
         return *libc::__error();
     }
 
