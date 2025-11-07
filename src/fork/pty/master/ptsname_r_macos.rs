@@ -23,21 +23,20 @@ pub unsafe fn ptsname_r(
         return *libc::__error();
     }
 
-    let mut len = 0;
-    while len < IOCTL_BUF_SIZE && ioctl_buf[len] != 0 {
-        len += 1;
-    }
-    len += 1;
+    let null_ptr = libc::memchr(ioctl_buf.as_ptr() as *const libc::c_void, 0, IOCTL_BUF_SIZE);
+
+    let len = if null_ptr.is_null() {
+        IOCTL_BUF_SIZE
+    } else {
+        let offset = (null_ptr as usize) - (ioctl_buf.as_ptr() as usize);
+        offset + 1 // include null terminator.
+    };
 
     if len > buflen {
         return libc::ERANGE;
     }
 
-    libc::memcpy(
-        buf as *mut libc::c_void,
-        ioctl_buf.as_ptr() as *const libc::c_void,
-        len,
-    );
+    std::ptr::copy(ioctl_buf.as_ptr(), buf, len);
 
     0
 }
