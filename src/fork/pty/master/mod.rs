@@ -69,12 +69,12 @@ impl Master {
     /// subsequent calls.
     pub fn ptsname_r(&self, buf: &mut [u8]) -> Result<()> {
         if let Some(fd) = self.pty {
+            // Safety: the vector's memory is valid for the duration
+            // of the call
             unsafe {
                 let data: *mut u8 = &mut buf[0];
 
                 #[cfg(any(target_os = "linux", target_os = "android"))]
-                // Safety: the vector's memory is valid for the duration
-                // of the call
                 let result = libc::ptsname_r(fd, data as *mut libc::c_char, buf.len());
 
                 #[cfg(any(target_os = "macos"))]
