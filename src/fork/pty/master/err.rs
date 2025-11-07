@@ -3,7 +3,6 @@ use std::error::Error;
 use std::fmt;
 
 /// The alias `Result` learns `MasterError` possibility.
-
 pub type Result<T> = ::std::result::Result<T, MasterError>;
 
 /// The enum `MasterError` defines the possible errors from constructor Master.
@@ -18,7 +17,6 @@ pub enum MasterError {
 
 impl fmt::Display for MasterError {
     /// The function `fmt` formats the value using the given formatter.
-
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", ::errno::errno())
     }
@@ -26,7 +24,6 @@ impl fmt::Display for MasterError {
 
 impl Error for MasterError {
     /// The function `description` returns a short description of the error.
-
     fn description(&self) -> &str {
         match *self {
             MasterError::BadDescriptor(_) => "the descriptor as occured an error",

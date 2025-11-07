@@ -3,7 +3,6 @@ use std::error::Error;
 use std::fmt;
 
 /// The alias `Result` learns `SlaveError` possibility.
-
 pub type Result<T> = ::std::result::Result<T, SlaveError>;
 
 /// The enum `SlaveError` defines the possible errors from constructor Slave.

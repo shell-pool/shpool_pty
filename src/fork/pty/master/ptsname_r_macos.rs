@@ -5,13 +5,13 @@
 //!
 //! Based on: https://tarq.net/posts/ptsname-on-osx-with-rust/
 
-#[cfg(any(target_os = "macos"))]
+#[cfg(target_os = "macos")]
 /// # Safety
 ///
 /// Callers must uphold the following invariants:
 /// - `fd` must refer to an open master PTY file descriptor.
 /// - `buf` must point to a valid allocation with capacity of at least `buflen` bytes and the
-///    allocation must remain valid throughout the function call.
+///   allocation must remain valid throughout the function call.
 pub unsafe fn ptsname_r(
     fd: libc::c_int,
     buf: *mut libc::c_char,
@@ -52,7 +52,7 @@ mod tests {
     use super::*;
     use std::ffi::CStr;
 
-    #[cfg(any(target_os = "macos"))]
+    #[cfg(target_os = "macos")]
     #[test]
     fn test_ptsname_r_retrieves_valid_name() {
         // Safety: calling libc function with valid flags.
@@ -88,7 +88,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos"))]
+    #[cfg(target_os = "macos")]
     #[test]
     fn test_ptsname_r_buffer_too_small() {
         // Safety: calling libc function with valid flags.
@@ -116,7 +116,7 @@ mod tests {
         }
     }
 
-    #[cfg(any(target_os = "macos"))]
+    #[cfg(target_os = "macos")]
     #[test]
     fn test_ptsname_r_invalid_fd() {
         let mut buf = vec![0u8; 1024];
@@ -126,7 +126,7 @@ mod tests {
         assert_ne!(result, 0, "Expected non-zero error code for invalid fd");
     }
 
-    #[cfg(any(target_os = "macos"))]
+    #[cfg(target_os = "macos")]
     #[test]
     fn test_ptsname_r_null_buffer() {
         // Safety: calling libc function with valid flags.
