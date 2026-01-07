@@ -1,5 +1,8 @@
 mod err;
 
+#[cfg(target_os = "macos")]
+mod ptsname_r_macos;
+
 use descriptor::Descriptor;
 
 pub use self::err::{MasterError, Result};
@@ -70,7 +73,14 @@ impl Master {
             // of the call
             unsafe {
                 let data: *mut u8 = &mut buf[0];
-                match libc::ptsname_r(fd, data as *mut libc::c_char, buf.len()) {
+
+                #[cfg(any(target_os = "linux", target_os = "android"))]
+                let result = libc::ptsname_r(fd, data as *mut libc::c_char, buf.len());
+
+                #[cfg(target_os = "macos")]
+                let result = ptsname_r_macos::ptsname_r(fd, data as *mut libc::c_char, buf.len());
+
+                match result {
                     0 => Ok(()),
                     _ => Err(MasterError::PtsnameError), // should probably capture errno
                 }
@@ -97,7 +107,7 @@ impl io::Read for Master {
                 }
             }
         } else {
-            Err(io::Error::new(io::ErrorKind::Other, "already closed"))
+            Err(io::Error::other("already closed"))
         }
     }
 }
@@ -112,7 +122,7 @@ impl io::Write for Master {
                 }
             }
         } else {
-            Err(io::Error::new(io::ErrorKind::Other, "already closed"))
+            Err(io::Error::other("already closed"))
         }
     }
 

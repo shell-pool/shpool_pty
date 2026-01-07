@@ -28,7 +28,6 @@ impl Error for DescriptorError {
     }
 
     /// The function `cause` returns the lower-level cause of this error, if any.
-
     fn cause(&self) -> Option<&dyn Error> {
         None
     }
