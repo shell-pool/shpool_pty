@@ -29,7 +29,10 @@ fn it_can_read_write() {
         let _ = master.write("exit\n".to_string().as_bytes());
     } else {
         let mut cmd = Command::new("bash");
+        cmd.arg("--rcfile").arg("/dev/null");
         cmd.env_clear();
+
+        cmd.env("PS1", "");
 
         // On macOS, silence the deprecation warning;
         // https://github.com/apple-oss-distributions/bash/blob/e86b2aa8e37a31f8fce56366d1abaf08a3fac7d2/bash-3.2/shell.c#L760-L765
