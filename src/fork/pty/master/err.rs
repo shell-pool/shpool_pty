@@ -12,7 +12,6 @@ pub enum MasterError {
     GrantptError,
     UnlockptError,
     PtsnameError,
-    NoFdError,
 }
 
 impl fmt::Display for MasterError {
@@ -30,7 +29,6 @@ impl Error for MasterError {
             MasterError::GrantptError => "the `grantpt` has a error, errnois set appropriately.",
             MasterError::UnlockptError => "the `grantpt` has a error, errnois set appropriately.",
             MasterError::PtsnameError => "the `ptsname` has a error",
-            MasterError::NoFdError => "already closed, no fd",
         }
     }
 
