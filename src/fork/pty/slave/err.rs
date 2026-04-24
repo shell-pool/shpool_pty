@@ -10,7 +10,6 @@ pub type Result<T> = ::std::result::Result<T, SlaveError>;
 pub enum SlaveError {
     BadDescriptor(DescriptorError),
     Dup2Error,
-    NoFdError,
 }
 
 impl fmt::Display for SlaveError {
@@ -26,7 +25,6 @@ impl Error for SlaveError {
         match *self {
             SlaveError::BadDescriptor(_) => "the descriptor as occured an error",
             SlaveError::Dup2Error => "the `dup2` has a error, errno isset appropriately.",
-            SlaveError::NoFdError => "the pty has already been closed, no fd",
         }
     }
 

@@ -3,126 +3,117 @@ mod err;
 #[cfg(target_os = "macos")]
 mod ptsname_r_macos;
 
-use descriptor::Descriptor;
+use crate::descriptor;
 
 pub use self::err::{MasterError, Result};
-use std::ffi::CStr;
-use std::io;
-use std::os::fd::BorrowedFd;
-use std::os::unix::io::RawFd;
+use std::{
+    ffi::CStr,
+    io,
+    os::{
+        fd::{AsFd, AsRawFd, BorrowedFd, OwnedFd},
+        unix::io::RawFd,
+    },
+    sync::Arc,
+};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Master {
-    pty: Option<RawFd>,
+    pty: Arc<OwnedFd>,
 }
 
 impl Master {
     pub fn new(path: &CStr) -> Result<Self> {
-        match Self::open(path, libc::O_RDWR, None) {
+        match descriptor::open(path, libc::O_RDWR, None) {
             Err(cause) => Err(MasterError::BadDescriptor(cause)),
-            Ok(fd) => Ok(Master { pty: Some(fd) }),
+            Ok(fd) => Ok(Master { pty: Arc::new(fd) }),
         }
     }
 
     /// Extract the raw fd from the underlying object
-    pub fn raw_fd(&self) -> &Option<RawFd> {
-        &self.pty
+    pub fn raw_fd(&self) -> RawFd {
+        self.pty.as_raw_fd()
     }
 
     /// Borrow the raw fd
-    pub fn borrow_fd(&self) -> Option<BorrowedFd<'_>> {
-        // Safety: we only ever close on drop, so this will be
-        //         live the whole time.
-        self.pty.map(|fd| unsafe { BorrowedFd::borrow_raw(fd) })
+    pub fn borrow_fd(&self) -> BorrowedFd<'_> {
+        self.pty.as_fd()
     }
 
     /// Change UID and GID of slave pty associated with master pty whose
     /// fd is provided, to the real UID and real GID of the calling thread.
     pub fn grantpt(&self) -> Result<libc::c_int> {
-        if let Some(fd) = self.pty {
-            unsafe {
-                match libc::grantpt(fd) {
-                    -1 => Err(MasterError::GrantptError),
-                    c => Ok(c),
-                }
+        // Safety: pty is live across the lifetime of this call,
+        // so the fd is valid.
+        unsafe {
+            match libc::grantpt(self.raw_fd()) {
+                -1 => Err(MasterError::GrantptError),
+                c => Ok(c),
             }
-        } else {
-            Err(MasterError::NoFdError)
         }
     }
 
     /// Unlock the slave pty associated with the master to which fd refers.
     pub fn unlockpt(&self) -> Result<libc::c_int> {
-        if let Some(fd) = self.pty {
-            unsafe {
-                match libc::unlockpt(fd) {
-                    -1 => Err(MasterError::UnlockptError),
-                    c => Ok(c),
-                }
+        // Safety: pty is live across the lifetime of this call,
+        // so the fd is valid.
+        unsafe {
+            match libc::unlockpt(self.raw_fd()) {
+                -1 => Err(MasterError::UnlockptError),
+                c => Ok(c),
             }
-        } else {
-            Err(MasterError::NoFdError)
         }
     }
 
     /// Returns a pointer to a static buffer, which will be overwritten on
     /// subsequent calls.
     pub fn ptsname_r(&self, buf: &mut [u8]) -> Result<()> {
-        if let Some(fd) = self.pty {
-            // Safety: the vector's memory is valid for the duration
-            // of the call
-            unsafe {
-                let data: *mut u8 = &mut buf[0];
+        // Safety: the vector's memory is valid for the duration
+        // of the call
+        unsafe {
+            let data: *mut u8 = &mut buf[0];
 
-                #[cfg(any(target_os = "linux", target_os = "android"))]
-                let result = libc::ptsname_r(fd, data as *mut libc::c_char, buf.len());
+            #[cfg(any(target_os = "linux", target_os = "android"))]
+            let result = libc::ptsname_r(self.raw_fd(), data as *mut libc::c_char, buf.len());
 
-                #[cfg(target_os = "macos")]
-                let result = ptsname_r_macos::ptsname_r(fd, data as *mut libc::c_char, buf.len());
+            #[cfg(target_os = "macos")]
+            let result = ptsname_r_macos::ptsname_r(fd, data as *mut libc::c_char, buf.len());
 
-                match result {
-                    0 => Ok(()),
-                    _ => Err(MasterError::PtsnameError), // should probably capture errno
-                }
+            match result {
+                0 => Ok(()),
+                _ => Err(MasterError::PtsnameError), // should probably capture errno
             }
-        } else {
-            Err(MasterError::NoFdError)
         }
-    }
-}
-
-unsafe impl Descriptor for Master {
-    fn take_raw_fd(&mut self) -> Option<RawFd> {
-        self.pty.take()
     }
 }
 
 impl io::Read for Master {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        if let Some(fd) = self.pty {
-            unsafe {
-                match libc::read(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len()) {
-                    -1 => Ok(0),
-                    len => Ok(len as usize),
-                }
+        // Safety: the vector's memory is valid for the duration
+        // of the call
+        unsafe {
+            match libc::read(
+                self.raw_fd(),
+                buf.as_mut_ptr() as *mut libc::c_void,
+                buf.len(),
+            ) {
+                -1 => Ok(0),
+                len => Ok(len as usize),
             }
-        } else {
-            Err(io::Error::other("already closed"))
         }
     }
 }
 
 impl io::Write for Master {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        if let Some(fd) = self.pty {
-            unsafe {
-                match libc::write(fd, buf.as_ptr() as *const libc::c_void, buf.len()) {
-                    -1 => Err(io::Error::last_os_error()),
-                    ret => Ok(ret as usize),
-                }
+        unsafe {
+            match libc::write(
+                self.raw_fd(),
+                buf.as_ptr() as *const libc::c_void,
+                buf.len(),
+            ) {
+                -1 => Err(io::Error::last_os_error()),
+                ret => Ok(ret as usize),
             }
-        } else {
-            Err(io::Error::other("already closed"))
         }
     }
 

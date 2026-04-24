@@ -1,60 +1,50 @@
 mod err;
 
-use descriptor::Descriptor;
+use crate::descriptor;
 
 pub use self::err::{Result, SlaveError};
-use std::ffi::CStr;
-use std::os::fd::BorrowedFd;
-use std::os::unix::io::RawFd;
+
+use std::{
+    ffi::CStr,
+    os::{
+        fd::{AsFd, AsRawFd, BorrowedFd, OwnedFd},
+        unix::io::RawFd,
+    },
+    sync::Arc,
+};
 
 #[derive(Debug, Clone)]
 pub struct Slave {
-    pty: Option<RawFd>,
+    pty: Arc<OwnedFd>,
 }
 
 impl Slave {
     /// The constructor function `new` returns the Slave interface.
     pub fn new(path: &CStr) -> Result<Self> {
-        match Self::open(path, libc::O_RDWR, None) {
+        match descriptor::open(path, libc::O_RDWR, None) {
             Err(cause) => Err(SlaveError::BadDescriptor(cause)),
-            Ok(fd) => Ok(Slave { pty: Some(fd) }),
+            Ok(fd) => Ok(Slave { pty: Arc::new(fd) }),
         }
     }
 
     /// Extract the raw fd from the underlying object
-    pub fn raw_fd(&self) -> &Option<RawFd> {
-        &self.pty
+    pub fn raw_fd(&self) -> RawFd {
+        self.pty.as_raw_fd()
     }
 
     /// Borrow the raw fd
-    pub fn borrow_fd(&self) -> Option<BorrowedFd<'_>> {
-        // Safety: we only ever close on drop, so this will be
-        //         live the whole time.
-        self.pty.map(|fd| unsafe { BorrowedFd::borrow_raw(fd) })
+    pub fn borrow_fd(&self) -> BorrowedFd<'_> {
+        self.pty.as_fd()
     }
 
     pub fn dup2(&self, std: libc::c_int) -> Result<libc::c_int> {
-        if let Some(fd) = self.pty {
-            unsafe {
-                match libc::dup2(fd, std) {
-                    -1 => Err(SlaveError::Dup2Error),
-                    d => Ok(d),
-                }
+        // Safety: pty is live across the lifetime of this call,
+        // so the fd is valid.
+        unsafe {
+            match libc::dup2(self.raw_fd(), std) {
+                -1 => Err(SlaveError::Dup2Error),
+                d => Ok(d),
             }
-        } else {
-            Err(SlaveError::NoFdError)
         }
-    }
-}
-
-unsafe impl Descriptor for Slave {
-    fn take_raw_fd(&mut self) -> Option<RawFd> {
-        self.pty.take()
-    }
-}
-
-impl Drop for Slave {
-    fn drop(&mut self) {
-        Descriptor::drop(self);
     }
 }

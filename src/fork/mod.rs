@@ -1,8 +1,6 @@
 mod err;
 mod pty;
 
-use descriptor::Descriptor;
-
 pub use self::err::{ForkError, Result};
 pub use self::pty::{Master, MasterError};
 pub use self::pty::{Slave, SlaveError};
@@ -132,7 +130,7 @@ impl Fork {
     pub fn is_parent(&self) -> Result<Master> {
         match *self {
             Fork::Child(_) => Err(ForkError::IsChild),
-            Fork::Parent(_, ref master) => Ok(*master),
+            Fork::Parent(_, ref master) => Ok(master.clone()),
         }
     }
 
@@ -142,14 +140,6 @@ impl Fork {
         match *self {
             Fork::Parent(_, _) => Err(ForkError::IsParent),
             Fork::Child(ref slave) => Ok(slave),
-        }
-    }
-}
-
-impl Drop for Fork {
-    fn drop(&mut self) {
-        if let Fork::Parent(_, master) = self {
-            Descriptor::drop(master)
         }
     }
 }
