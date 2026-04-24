@@ -1,6 +1,7 @@
 //! # PTY
 //!
-//! [![Crate][crate-badge]][crate] [![docs-badge][]][docs] [![license-badge][]][license] [![travis-badge][]][travis]
+//! [![Crate][crate-badge]][crate] [![docs-badge][]][docs]
+//! [![license-badge][]][license] [![travis-badge][]][travis]
 //!
 //! [crate-badge]: https://img.shields.io/badge/crates.io-v0.2.0-orange.svg?style=flat-square
 //! [crate]: https://crates.io/crates/pty
@@ -14,7 +15,8 @@
 //! [travis-badge]: https://travis-ci.org/hibariya/pty-rs.svg?branch=master&style=flat-square
 //! [travis]: https://travis-ci.org/hibariya/pty-rs
 //!
-//! The `pty` crate provides `pty::fork()`. That makes a parent process fork with new pseudo-terminal (PTY).
+//! The `pty` crate provides `pty::fork()`. That makes a parent process fork
+//! with new pseudo-terminal (PTY).
 //!
 //! This crate depends on followings:
 //!
@@ -38,9 +40,11 @@
 //!
 //! ### pty::fork()
 //!
-//! This function returns `pty::Child`. It represents the child process and its PTY.
+//! This function returns `pty::Child`. It represents the child process and its
+//! PTY.
 //!
-//! For example, the following code spawns `tty(1)` command by `pty::fork()` and outputs the result of the command.
+//! For example, the following code spawns `tty(1)` command by `pty::fork()` and
+//! outputs the result of the command.
 //!
 //! ```rust
 //! extern crate shpool_pty;

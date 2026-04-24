@@ -32,7 +32,8 @@ impl Error for MasterError {
         }
     }
 
-    /// The function `cause` returns the lower-level cause of this error, if any.
+    /// The function `cause` returns the lower-level cause of this error, if
+    /// any.
     fn cause(&self) -> Option<&dyn Error> {
         match *self {
             MasterError::BadDescriptor(ref err) => Some(err),

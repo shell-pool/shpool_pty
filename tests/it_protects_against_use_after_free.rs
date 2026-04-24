@@ -18,10 +18,7 @@ fn it_drops_correctly() {
     let fd = master.raw_fd();
 
     // Check if fd is valid
-    assert!(
-        unsafe { libc::fcntl(fd, libc::F_GETFD) } != -1,
-        "FD should be valid"
-    );
+    assert!(unsafe { libc::fcntl(fd, libc::F_GETFD) } != -1, "FD should be valid");
 
     let master_clone = master.clone();
     assert_eq!(master.raw_fd(), master_clone.raw_fd());
@@ -42,10 +39,7 @@ fn it_drops_correctly() {
 
     drop(fork);
     // Now it should be closed
-    assert!(
-        unsafe { libc::fcntl(fd, libc::F_GETFD) } == -1,
-        "FD should be closed after last drop"
-    );
+    assert!(unsafe { libc::fcntl(fd, libc::F_GETFD) } == -1, "FD should be closed after last drop");
 }
 
 #[test]
