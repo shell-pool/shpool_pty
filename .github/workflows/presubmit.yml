@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - uses: moonrepo/setup-rust@b8edcc56aab474d90c7cf0bb8beeaf8334c15e9f
         with:
-          channel: '1.74.0'
+          channel: '1.85.0'
       - run: sudo apt-get install libpam0g-dev
       - run: cargo test --all-features
       - run: cargo test --no-default-features
@@ -45,7 +45,7 @@ jobs:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - uses: moonrepo/setup-rust@b8edcc56aab474d90c7cf0bb8beeaf8334c15e9f
         with:
-          channel: '1.74.0'
+          channel: '1.85.0'
           bins: cargo-deny
       - run: sudo apt-get install libpam0g-dev
       - run: cargo deny --all-features check licenses
