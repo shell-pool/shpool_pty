@@ -91,11 +91,7 @@ impl io::Read for Master {
         // Safety: the vector's memory is valid for the duration
         // of the call
         unsafe {
-            match libc::read(
-                self.raw_fd(),
-                buf.as_mut_ptr() as *mut libc::c_void,
-                buf.len(),
-            ) {
+            match libc::read(self.raw_fd(), buf.as_mut_ptr() as *mut libc::c_void, buf.len()) {
                 -1 => Ok(0),
                 len => Ok(len as usize),
             }
@@ -106,11 +102,7 @@ impl io::Read for Master {
 impl io::Write for Master {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         unsafe {
-            match libc::write(
-                self.raw_fd(),
-                buf.as_ptr() as *const libc::c_void,
-                buf.len(),
-            ) {
+            match libc::write(self.raw_fd(), buf.as_ptr() as *const libc::c_void, buf.len()) {
                 -1 => Err(io::Error::last_os_error()),
                 ret => Ok(ret as usize),
             }

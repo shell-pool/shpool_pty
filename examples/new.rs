@@ -12,15 +12,9 @@ fn main() {
     if let Ok(mut master) = fork.is_parent() {
         let mut string = String::new();
 
-        master
-            .read_to_string(&mut string)
-            .unwrap_or_else(|e| panic!("{}", e));
+        master.read_to_string(&mut string).unwrap_or_else(|e| panic!("{}", e));
 
-        let output = Command::new("tty")
-            .stdin(Stdio::inherit())
-            .output()
-            .unwrap()
-            .stdout;
+        let output = Command::new("tty").stdin(Stdio::inherit()).output().unwrap().stdout;
         let output_str = String::from_utf8_lossy(&output);
 
         let parent_tty = output_str.trim();

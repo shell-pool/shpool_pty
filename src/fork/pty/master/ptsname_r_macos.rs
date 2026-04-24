@@ -10,8 +10,8 @@
 ///
 /// Callers must uphold the following invariants:
 /// - `fd` must refer to an open master PTY file descriptor.
-/// - `buf` must point to a valid allocation with capacity of at least `buflen` bytes and the
-///   allocation must remain valid throughout the function call.
+/// - `buf` must point to a valid allocation with capacity of at least `buflen`
+///   bytes and the allocation must remain valid throughout the function call.
 pub unsafe fn ptsname_r(
     fd: libc::c_int,
     buf: *mut libc::c_char,
@@ -102,8 +102,8 @@ mod tests {
             }
 
             let mut buf = [0u8; 2];
-            // Safety: master_fd is valid, buf is a properly sized allocation though intentionally
-            // too small.
+            // Safety: master_fd is valid, buf is a properly sized allocation though
+            // intentionally too small.
             let result =
                 unsafe { ptsname_r(master_fd, buf.as_mut_ptr() as *mut libc::c_char, buf.len()) };
 

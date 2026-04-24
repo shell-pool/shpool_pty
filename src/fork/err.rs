@@ -58,7 +58,8 @@ impl Error for ForkError {
         }
     }
 
-    /// The function `cause` returns the lower-level cause of this error, if any.
+    /// The function `cause` returns the lower-level cause of this error, if
+    /// any.
     fn cause(&self) -> Option<&dyn Error> {
         match *self {
             ForkError::BadMaster(ref err) => Some(err),
