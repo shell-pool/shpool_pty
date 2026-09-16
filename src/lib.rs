@@ -74,6 +74,10 @@
 //!   }
 //! }
 //! ```
+//!
+//! `Fork::new` performs all its pty setup before forking, so the child only
+//! makes async-signal-safe calls before it returns, which keeps it from
+//! deadlocking when the caller is multithreaded.
 
 extern crate errno;
 extern crate libc;

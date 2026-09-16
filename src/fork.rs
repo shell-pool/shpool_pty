@@ -7,6 +7,7 @@ use std::error::Error;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::fmt;
+use std::mem;
 
 /// The alias `Result` learns `ForkError` possibility.
 pub type Result<T> = ::std::result::Result<T, ForkError>;
@@ -18,6 +19,8 @@ pub enum ForkError {
     Failure,
     /// Can't set the id group.
     SetsidFail,
+    /// Can't make the pty the controlling terminal of the child.
+    SetcttyFail,
     /// Can't suspending the calling process.
     WaitpidFail,
     /// Is child and not parent.
@@ -51,6 +54,9 @@ impl Error for ForkError {
             }
             ForkError::SetsidFail => {
                 "fails if the calling process is alreadya process group leader."
+            }
+            ForkError::SetcttyFail => {
+                "the `TIOCSCTTY` ioctl failed, so the child has no controlling terminal."
             }
             ForkError::WaitpidFail => "Can't suspending the calling process.",
             ForkError::IsChild => "is child and not parent",
@@ -88,65 +94,121 @@ pub enum Fork {
 impl Fork {
     /// The constructor function `new` forks the program
     /// and returns the current pid.
+    ///
+    /// All the work that might touch the allocator (opening the master and
+    /// slave halves of the pty, resolving the name of the slave pty) happens
+    /// *before* the `fork(2)` call. Between the fork and the point where this
+    /// routine hands control back to the child, the child only makes
+    /// async-signal-safe calls (`close(2)`, `setsid(2)`, `ioctl(2)` and
+    /// `dup2(2)`).
+    ///
+    /// This matters because the child of a `fork(2)` in a multithreaded
+    /// process may only call async-signal-safe routines until it calls one of
+    /// the `exec` family of routines. Only the forking thread survives into
+    /// the child, so any lock (the allocator lock in particular) that happened
+    /// to be held by one of the other threads at the instant of the fork stays
+    /// locked forever, and the child deadlocks the first time it needs it.
+    ///
+    /// Note that this guarantee only covers what this routine itself does. It
+    /// is up to the caller to make sure that whatever it runs in the child
+    /// before `exec`ing is async-signal-safe as well.
     pub fn new(path: &'static str) -> Result<Self> {
-        match Master::new(CString::new(path).ok().unwrap_or_default().as_c_str()) {
-            Err(cause) => Err(ForkError::BadMaster(cause)),
-            Ok(master) => {
-                if let Some(cause) = master.grantpt().err().or(master.unlockpt().err()) {
-                    Err(ForkError::BadMaster(cause))
-                } else {
-                    // Safety: no params to worry about, just an ffi call
-                    let fork_ret = unsafe { libc::fork() };
-                    match fork_ret {
-                        -1 => Err(ForkError::Failure),
-                        0 => {
-                            let mut ptsname_buf = vec![0; MAX_PTS_NAME];
-                            if let Err(cause) = master.ptsname_r(&mut ptsname_buf) {
-                                return Err(ForkError::BadMaster(cause));
-                            }
-                            // ensure null termination
-                            let last_idx = ptsname_buf.len() - 1;
-                            ptsname_buf[last_idx] = 0;
+        // Note the scope: the `CString` has to be freed before we fork,
+        // otherwise its destructor would run in the child and call into the
+        // allocator there.
+        let master = {
+            let path = CString::new(path).ok().unwrap_or_default();
+            match Master::new(path.as_c_str()) {
+                Err(cause) => return Err(ForkError::BadMaster(cause)),
+                Ok(master) => master,
+            }
+        };
+        if let Some(cause) = master.grantpt().err().or(master.unlockpt().err()) {
+            return Err(ForkError::BadMaster(cause));
+        }
 
-                            let name_ptr: *const u8 = &ptsname_buf[0];
-                            // Safety: ptsname_r returns a valid c string when it returns a 0
-                            // (success) code, and we make double extra sure there is a null
-                            // terminator by adding one ourselves.
-                            let name: &CStr =
-                                unsafe { CStr::from_ptr(name_ptr as *const libc::c_char) };
-                            Fork::from_pts(name)
-                        }
-                        pid => Ok(Fork::Parent(pid, master)),
-                    }
-                }
+        // Look up the name of the slave pty and open it here in the parent so
+        // that the child doesn't have to. The buffer lives on the stack rather
+        // than the heap for the same reason.
+        let mut ptsname_buf = [0u8; MAX_PTS_NAME];
+        if let Err(cause) = master.ptsname_r(&mut ptsname_buf) {
+            return Err(ForkError::BadMaster(cause));
+        }
+        let Ok(ptsname) = CStr::from_bytes_until_nul(&ptsname_buf) else {
+            // ptsname_r is contracted to null terminate the buffer when it
+            // succeeds, so this should never happen.
+            return Err(ForkError::BadMaster(MasterError::PtsnameError));
+        };
+        let slave = match Slave::new_noctty(ptsname) {
+            Err(cause) => return Err(ForkError::BadSlave(cause)),
+            Ok(slave) => slave,
+        };
+
+        // Safety: no params to worry about, just an ffi call
+        let fork_ret = unsafe { libc::fork() };
+        match fork_ret {
+            -1 => Err(ForkError::Failure),
+            0 => {
+                // Everything from here on out runs in the child, so it has to
+                // stay async-signal-safe (see the doc comment above).
+                //
+                // The child has no use for the master half of the pty, but we
+                // can't just drop it, since freeing the `Arc` behind it would
+                // mean calling into the allocator. Leak the (tiny, and about
+                // to be blown away by an exec anyway) allocation instead and
+                // close the fd by hand.
+                let master_fd = master.raw_fd();
+                mem::forget(master);
+                // Safety: the `mem::forget` above means nothing else is going
+                // to close this fd, so we are the owner of it.
+                unsafe { libc::close(master_fd) };
+
+                Fork::from_slave(slave)
+            }
+            pid => {
+                // The parent has no use for the slave half of the pty, and
+                // hanging on to it would keep reads on the master from ever
+                // seeing an EOF once the child exits.
+                drop(slave);
+                Ok(Fork::Parent(pid, master))
             }
         }
     }
 
-    /// The constructor function `from_pts` is a private
-    /// extention from the constructor function `new` who
-    /// prepares and returns the child.
-    fn from_pts(ptsname: &CStr) -> Result<Self> {
+    /// The constructor function `from_slave` is a private extension of the
+    /// constructor function `new` which runs in the freshly forked child and
+    /// wires up the already opened slave pty as the child's controlling
+    /// terminal and standard streams.
+    ///
+    /// Everything it does must be async-signal-safe, see the note on `new`.
+    fn from_slave(slave: Slave) -> Result<Self> {
+        // Safety: `setsid` takes no arguments, and the fd handed to `ioctl` is
+        // owned by `slave`, so it stays valid for the duration of the call.
         unsafe {
             if libc::setsid() == -1 {
-                Err(ForkError::SetsidFail)
-            } else {
-                match Slave::new(ptsname) {
-                    Err(cause) => Err(ForkError::BadSlave(cause)),
-                    Ok(slave) => {
-                        if let Some(cause) = slave.dup2(libc::STDIN_FILENO).err().or(slave
-                            .dup2(libc::STDOUT_FILENO)
-                            .err()
-                            .or(slave.dup2(libc::STDERR_FILENO).err()))
-                        {
-                            Err(ForkError::BadSlave(cause))
-                        } else {
-                            Ok(Fork::Child(slave))
-                        }
-                    }
-                }
+                return Err(ForkError::SetsidFail);
+            }
+
+            // Now that we are a session leader without a controlling terminal,
+            // claim the pty as our controlling terminal. The child used to get
+            // this for free by open(2)ing the slave itself, but the open now
+            // happens in the parent (with `O_NOCTTY`) so that the child stays
+            // async-signal-safe.
+            if libc::ioctl(slave.raw_fd(), libc::TIOCSCTTY as _, 0 as libc::c_int) == -1 {
+                return Err(ForkError::SetcttyFail);
             }
         }
+
+        if let Some(cause) = slave
+            .dup2(libc::STDIN_FILENO)
+            .err()
+            .or(slave.dup2(libc::STDOUT_FILENO).err())
+            .or(slave.dup2(libc::STDERR_FILENO).err())
+        {
+            return Err(ForkError::BadSlave(cause));
+        }
+
+        Ok(Fork::Child(slave))
     }
 
     /// The constructor function `from_ptmx` forks the program

@@ -54,7 +54,25 @@ pub struct Slave {
 impl Slave {
     /// The constructor function `new` returns the Slave interface.
     pub fn new(path: &CStr) -> Result<Self> {
-        match descriptor::open(path, libc::O_RDWR, None) {
+        Slave::open(path, libc::O_RDWR)
+    }
+
+    /// Opens the slave pty in a way that is safe to do from a process which is
+    /// about to `fork(2)`.
+    ///
+    /// `O_NOCTTY` keeps the calling process from accidentally picking up the
+    /// pty as its controlling terminal (the child claims it explicitly with a
+    /// `TIOCSCTTY` ioctl once it has become a session leader), and `O_CLOEXEC`
+    /// keeps the fd from leaking into unrelated processes that other threads
+    /// might spawn while we hold it open. `dup2(2)` strips `O_CLOEXEC` from
+    /// the copies the child installs as stdin/stdout/stderr, so the exec'd
+    /// program still gets its terminal.
+    pub(crate) fn new_noctty(path: &CStr) -> Result<Self> {
+        Slave::open(path, libc::O_RDWR | libc::O_NOCTTY | libc::O_CLOEXEC)
+    }
+
+    fn open(path: &CStr, flags: libc::c_int) -> Result<Self> {
+        match descriptor::open(path, flags, None) {
             Err(cause) => Err(SlaveError::BadDescriptor(cause)),
             Ok(fd) => Ok(Slave { pty: Arc::new(fd) }),
         }
