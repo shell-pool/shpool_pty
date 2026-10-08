@@ -22,7 +22,7 @@ travis        = ["lints", "nightly"] # for building with travis-cargo
 version       = "0.4"
 
 [dependencies.errno]
-version       = "0.2"
+version       = "0.3"
 
 [dependencies.libc]
 version       = ">= 0.2.18"
